@@ -1,76 +1,62 @@
 # Story Telling RAG
 
-A character analysis tool built with [LlamaIndex](https://www.llamaindex.ai/) and [Next.js](https://nextjs.org/), bootstrapped with [`create-llama`](https://github.com/run-llama/LlamaIndexTS/tree/main/packages/create-llama).
+A creative writing assistant that combines character analysis with AI-powered story generation. Built with [Next.js](https://nextjs.org/) and powered by OpenAI's GPT models.
 
 ## Features
 
-- Upload and analyze text files
-- Extract character information
-- Display character analysis in a clean, formatted table
-- Hidden chat interface for seamless user experience
+- **Character Analysis**: Upload and analyze text files to extract detailed character information
+- **Interactive Chat Interface**: Seamless chat experience for story generation and character analysis
+- **AI Story Generation**: Create new stories based on analyzed characters using GPT-4
+- **Character Table**: Clean, formatted display of character information including:
+  - Character names and roles
+  - Physical descriptions
+  - Personality traits
+  - Relationships
+  - Background information
+- **Story Management**: Generate, save, and view multiple stories with character integration
 
 ## Getting Started
 
-First, install the dependencies:
+1. Install the dependencies:
 
 ```bash
 npm install
 ```
 
-Second, generate the embeddings of the documents in the `./data` directory:
+2. Set up your environment variables:
+Create a `.env` file in the root directory with:
 
-```bash
-npm run generate
+```
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-Third, run the development server:
+3. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to start using the application.
 
-## Using Docker
+## How to Use
 
-1. Build an image for the Next.js app:
+1. **Upload Text**: Start by uploading a text file containing your story or character descriptions
+2. **Character Analysis**: The system will automatically analyze and extract character information
+3. **View Characters**: Check the character table to see the extracted information
+4. **Generate Stories**: Use the chat interface to create new stories based on the analyzed characters
+5. **Save Stories**: Save your generated stories for future reference
 
-```bash
-docker build -t <your_app_image_name> .
-```
+## Technical Stack
 
-2. Generate embeddings:
-
-Parse the data and generate the vector embeddings if the `./data` folder exists - otherwise, skip this step:
-
-```bash
-docker run \
-  --rm \
-  -v $(pwd)/.env:/app/.env \
-  -v $(pwd)/config:/app/config \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/cache:/app/cache \
-  <your_app_image_name> \
-  npm run generate
-```
-
-3. Start the app:
-
-```bash
-docker run \
-  --rm \
-  -v $(pwd)/.env:/app/.env \
-  -v $(pwd)/config:/app/config \
-  -v $(pwd)/cache:/app/cache \
-  -p 3000:3000 \
-  <your_app_image_name>
-```
+- **Frontend**: Next.js with TypeScript
+- **UI Components**: Tailwind CSS and Shadcn UI
+- **AI Integration**: OpenAI GPT-4 API
+- **State Management**: React Context API
 
 ## Learn More
 
-To learn more about LlamaIndex, take a look at the following resources:
+To learn more about the technologies used in this project:
 
-- [LlamaIndex Documentation](https://docs.llamaindex.ai) - learn about LlamaIndex (Python features).
-- [LlamaIndexTS Documentation](https://ts.llamaindex.ai) - learn about LlamaIndex (Typescript features).
-
-You can check out [the LlamaIndexTS GitHub repository](https://github.com/run-llama/LlamaIndexTS) - your feedback and contributions are welcome!
+- [Next.js Documentation](https://nextjs.org/docs)
+- [OpenAI API Documentation](https://platform.openai.com/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)

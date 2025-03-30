@@ -21,6 +21,9 @@ export default function CustomChatInput() {
   const { backend } = useClientConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [characterAnalysis, setCharacterAnalysis] = useState<CharacterAnalysis | null>(null);
+  const [structuredOutput, setStructuredOutput] = useState<string | null>(null);
+  const [story, setStory] = useState<string | null>(null);
+  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const {
     imageUrl,
     setImageUrl,
@@ -33,7 +36,92 @@ export default function CustomChatInput() {
 
   const { append, messages, isLoading: isChatLoading } = useChatUI();
 
-  // Effect to watch for new assistant messages
+  const handleExtractCharacters = async () => {
+    if (files.length === 0) {
+      alert('Please upload a file first.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const file = files[0]; // Get the first uploaded file
+
+      // Single request for markdown table format
+      await append({
+        role: 'user',
+        content: `Please analyze the content of the uploaded file "${file.name}" and extract all characters. For each character, provide their name, description, and personality traits. Format the response as a markdown table with columns: Name, Description, Personality. IMPORTANT: Only output the table, nothing else. Do not include any follow-up questions, additional text, or suggestions.`
+      });
+
+    } catch (error: any) {
+      console.error('Character extraction error:', error);
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateStory = async () => {
+    if (!characterAnalysis) {
+      console.error('No character analysis available');
+      return;
+    }
+
+    setIsGeneratingStory(true);
+    setStory(''); // Clear any existing story
+
+    try {
+      // Create a prompt for story generation
+      const prompt = `Create a new story using these characters:
+${characterAnalysis.characters.map(char => 
+  `- ${char.name}: ${char.description} (${char.personality})`
+).join('\n')}
+
+Please write a complete story with a clear beginning, middle, and end. The story should be engaging and use all the characters in meaningful ways.`;
+
+      // Make a direct API call to generate the story
+      const response = await fetch(`${backend}/api/chat/generate-story`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate story');
+      }
+
+      const data = await response.json();
+      const storyContent = data.story;
+
+      if (storyContent) {
+        // Clean up the story content
+        const cleanedStory = storyContent
+          .replace(/^(In|The)\s+/, '') // Remove leading "In" or "The"
+          .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+          .trim();
+        
+        if (cleanedStory) {
+          // Split into paragraphs and clean each one
+          const paragraphs = cleanedStory
+            .split('\n')
+            .map(p => p.trim())
+            .filter(p => p && !p.match(/^(In|The)\s+$/));
+          
+          if (paragraphs.length > 0) {
+            setStory(paragraphs.join('\n\n'));
+            setIsGeneratingStory(false);
+            console.log('Story set successfully');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate story:', error);
+      setIsGeneratingStory(false);
+    }
+  };
+
+  // Effect to watch for new assistant messages - only for character extraction
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
@@ -47,6 +135,18 @@ export default function CustomChatInput() {
           try {
             const analysis = parseTableContent(tableContent);
             setCharacterAnalysis(analysis);
+            console.log('Table analysis set:', analysis);
+
+            // Convert table analysis to JSON format
+            const jsonOutput = {
+              characters: analysis.characters.map(char => ({
+                name: char.name,
+                description: char.description,
+                personality: char.personality
+              }))
+            };
+            setStructuredOutput(JSON.stringify(jsonOutput, null, 2));
+            console.log('JSON output set:', jsonOutput);
           } catch (error) {
             console.error('Failed to parse table content:', error);
           }
@@ -55,7 +155,7 @@ export default function CustomChatInput() {
         }
       }
     }
-  }, [messages]);
+  }, [messages]); // Only depend on messages
 
   /**
    * Extracts table content from the message
@@ -167,38 +267,6 @@ export default function CustomChatInput() {
     }
   };
 
-  /**
-   * Handles character extraction from the uploaded file
-   */
-  const handleExtractCharacters = async () => {
-    if (files.length === 0) {
-      alert('Please upload a file first.');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const file = files[0]; // Get the first uploaded file
-
-      // Send a message to the chat about the file upload
-      await append({
-        role: 'user',
-        content: `Please analyze the content of the uploaded file "${file.name}" and extract all characters. For each character, provide their name, description, and personality traits. Format the response as a markdown table with columns: Name, Description, Personality. IMPORTANT: Only output the table, nothing else. Do not include any follow-up questions, additional text, or suggestions.`
-      });
-
-      // Wait for the chat to finish loading
-      while (isChatLoading) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-    } catch (error: any) {
-      console.error('Character extraction error:', error);
-      alert(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="w-full space-y-4">
       <div className="shadow-xl rounded-xl p-4">
@@ -244,7 +312,7 @@ export default function CustomChatInput() {
       {/* Character Analysis Display */}
       {characterAnalysis && (
         <div className="shadow-xl rounded-xl p-4 bg-white">
-          <h2 className="text-xl font-bold mb-4">Character Analysis</h2>
+          <h2 className="text-xl font-bold mb-4">Character Analysis (Table)</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -264,6 +332,47 @@ export default function CustomChatInput() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Structured Output Display */}
+      {structuredOutput && (
+        <div className="shadow-xl rounded-xl p-4 bg-white">
+          <h2 className="text-xl font-bold mb-4">Character Analysis (JSON)</h2>
+          <pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto">
+            <code>{structuredOutput}</code>
+          </pre>
+        </div>
+      )}
+
+      {/* Create Story Button */}
+      {characterAnalysis && !story && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={handleGenerateStory}
+            disabled={isGeneratingStory}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          >
+            {isGeneratingStory ? 'Creating story...' : 'Create new story'}
+          </button>
+        </div>
+      )}
+
+      {/* Story Display */}
+      {story && (
+        <div className="shadow-xl rounded-xl p-4 bg-white">
+          <h2 className="text-xl font-bold mb-4">Generated Story</h2>
+          <div className="prose max-w-none">
+            {story
+              .split('\n\n')
+              .map(paragraph => paragraph.trim())
+              .filter(paragraph => paragraph && !paragraph.match(/^(In|The)\s+$/))
+              .map((paragraph, index) => (
+                <p key={index} className="mb-4 text-gray-700 leading-relaxed">
+                  {paragraph}
+                </p>
+              ))}
           </div>
         </div>
       )}
