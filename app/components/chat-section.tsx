@@ -25,7 +25,9 @@ export default function ChatSection() {
   });
   return (
     <ChatSectionUI handler={handler} className="w-full h-full">
-      <CustomChatMessages />
+      <div className="hidden">
+        <CustomChatMessages />
+      </div>
       <CustomChatInput />
     </ChatSectionUI>
   );
